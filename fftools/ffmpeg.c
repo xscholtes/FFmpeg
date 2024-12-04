@@ -542,14 +542,18 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
     int vid;
     double bitrate;
     double speed;
+    double avg_speed = 0.0;
     static int64_t last_time = -1;
     static int first_report = 1;
+    static uint64_t last_frame_number = 0;
+    static int64_t last_pts = 0;
     uint64_t nb_frames_dup = 0, nb_frames_drop = 0;
     int mins, secs, us;
     int64_t hours;
     const char *hours_sign;
     int ret;
     float t;
+    float t_since_last = 0;
 
     if (!print_stats && !is_last_report && !progress_avio)
         return;
@@ -561,6 +565,7 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
         if (((cur_time - last_time) < stats_period && !first_report) ||
             (first_report && atomic_load(&nb_output_dumped) < nb_output_files))
             return;
+        t_since_last = (cur_time - last_time) / 1000000.0;
         last_time = cur_time;
     }
 
@@ -579,13 +584,18 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
         }
         if (!vid && ost->type == AVMEDIA_TYPE_VIDEO && ost->filter) {
             float fps;
+            float avg_fps;
             uint64_t frame_number = atomic_load(&ost->packets_written);
 
+
             fps = t > 1 ? frame_number / t : 0;
+            avg_fps = t_since_last > 0 ? (frame_number - last_frame_number) / t_since_last : 0;
+            last_frame_number = frame_number;
             av_bprintf(&buf, "frame=%5"PRId64" fps=%3.*f q=%3.1f ",
                      frame_number, fps < 9.95, fps, q);
             av_bprintf(&buf_script, "frame=%"PRId64"\n", frame_number);
             av_bprintf(&buf_script, "fps=%.2f\n", fps);
+            av_bprintf(&buf_script, "avg_fps=%.2f\n", avg_fps);
             av_bprintf(&buf_script, "stream_%d_%d_q=%.1f\n",
                        ost->file->index, ost->index, q);
             if (is_last_report)
@@ -613,6 +623,12 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
 
     bitrate = pts != AV_NOPTS_VALUE && pts && total_size >= 0 ? total_size * 8 / (pts / 1000.0) : -1;
     speed   = pts != AV_NOPTS_VALUE && t != 0.0 ? (double)pts / AV_TIME_BASE / t : -1;
+    if (pts != AV_NOPTS_VALUE && last_pts != AV_NOPTS_VALUE && last_pts < pts && t_since_last > 0) {
+        avg_speed = (double)(pts - last_pts) / AV_TIME_BASE / t_since_last;
+    } else {
+        avg_speed = -1;
+    }
+    last_pts = pts;
 
     if (total_size < 0) av_bprintf(&buf, "size=N/A time=");
     else                av_bprintf(&buf, "size=%8.0fKiB time=", total_size / 1024.0);
@@ -655,6 +671,14 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
     } else {
         av_bprintf(&buf, " speed=%4.3gx", speed);
         av_bprintf(&buf_script, "speed=%4.3gx\n", speed);
+    }
+
+        if (speed < 0) {
+        av_bprintf(&buf, " avg_speed=N/A");
+        av_bprintf(&buf_script, "avg_speed=N/A\n");
+    } else {
+        av_bprintf(&buf, " avg_speed=%4.3gx", avg_speed);
+        av_bprintf(&buf_script, "avg_speed=%4.3gx\n", avg_speed);
     }
 
     if (print_stats || is_last_report) {

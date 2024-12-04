@@ -80,8 +80,9 @@ void ff_af_queue_remove(AudioFrameQueue *afq, int nb_samples, int64_t *pts,
     int i;
 
     if (afq->frame_count || afq->frame_alloc) {
-        if (afq->frames->pts != AV_NOPTS_VALUE)
+        if (afq->frames->pts != AV_NOPTS_VALUE) {
             out_pts = afq->frames->pts;
+        }
     }
     if(!afq->frame_count)
         av_log(afq->avctx, AV_LOG_WARNING, "Trying to remove %d samples, but the queue is empty\n", nb_samples);
