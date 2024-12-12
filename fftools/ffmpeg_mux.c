@@ -144,6 +144,14 @@ static int mux_fixup_ts(Muxer *mux, MuxStream *ms, AVPacket *pkt)
         pkt->pts = pkt->dts = AV_NOPTS_VALUE;
 #endif
 
+    if (pkt->dts != AV_NOPTS_VALUE) {
+        if (pkt->dts <= ms->last_dts) {
+            av_log(ost, AV_LOG_WARNING, "Invalid PKT DTS: %"PRId64" LAST-DTS: %"PRId64"\n",
+            pkt->dts, ms->last_dts);
+        }
+        ms->last_dts = pkt->dts;
+    }
+
     // rescale timestamps to the stream timebase
     if (ost->type == AVMEDIA_TYPE_AUDIO && !ost->enc) {
         // use av_rescale_delta() for streamcopying audio, to preserve

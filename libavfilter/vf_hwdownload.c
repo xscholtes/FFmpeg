@@ -138,6 +138,8 @@ static int hwdownload_filter_frame(AVFilterLink *link, AVFrame *input)
     err = av_hwframe_transfer_data(output, input, 0);
     if (err < 0) {
         av_log(ctx, AV_LOG_ERROR, "Failed to download frame: %d.\n", err);
+        /*@ypo do not conside it has an error to avoid stopping the transcode*/
+        err = 0;
         goto fail;
     }
 

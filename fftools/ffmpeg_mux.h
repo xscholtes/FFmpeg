@@ -62,6 +62,7 @@ typedef struct MuxStream {
     /* dts of the last packet sent to the muxer, in the stream timebase
      * used for making up missing dts values */
     int64_t         last_mux_dts;
+    int64_t         last_dts;
 
     int64_t         stream_duration;
     AVRational      stream_duration_tb;

@@ -701,6 +701,14 @@ static int vaapi_encode_set_output_property(AVCodecContext *avctx,
                                 (3 * ctx->output_delay + ctx->async_depth)];
     }
 
+    if (pkt->dts <= ctx->last_dts) {
+        av_log(avctx, AV_LOG_ERROR, "Wrong VAAPI DTS ?: "
+            "dts:%"PRId64" last_dts:%"PRId64"\n", pkt->dts, ctx->last_dts);
+    }    
+
+    ctx->last_dts = pkt->dts;
+
+
     return 0;
 }
 

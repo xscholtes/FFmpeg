@@ -205,7 +205,8 @@ int ff_vaapi_vpp_config_output(AVFilterLink *outlink)
 
     output_frames->initial_pool_size = 4;
 
-    err = ff_filter_init_hw_frames(avctx, outlink, 10);
+    /*@ypo Increase pool of hw frame from 10 to 20*/
+    err = ff_filter_init_hw_frames(avctx, outlink, 20);
     if (err < 0)
         goto fail;
 
